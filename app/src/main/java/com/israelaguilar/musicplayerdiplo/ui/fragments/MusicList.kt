@@ -16,8 +16,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.israelaguilar.musicplayerdiplo.R
+import com.israelaguilar.musicplayerdiplo.data.AudioRepository
 import com.israelaguilar.musicplayerdiplo.databinding.FragmentMusicListBinding
+import com.israelaguilar.musicplayerdiplo.ui.adapters.SongsAdapter
 import com.israelaguilar.musicplayerdiplo.ui.providers.PermissionExplanationProvider
 import com.israelaguilar.musicplayerdiplo.ui.providers.ReadAudioPermissionExplanationProvider
 import com.israelaguilar.musicplayerdiplo.ui.providers.ReadPermissionExplanationProvider
@@ -29,8 +34,10 @@ class MusicList : Fragment() {
     private var _binding: FragmentMusicListBinding? = null
     private val binding get() = _binding!!
 
-    // Instanciamos el viewmodel
-    private val musicListViewModel: MusicListViewModel by viewModels()
+    // Instanciamos el viewmodel con el audiorepository mediante el factory
+    private val musicListViewModel: MusicListViewModel by viewModels{
+        MusicListViewModelFactory(AudioRepository(requireContext()))
+    }
 
     private var readMediaAudioGranted = false // READ_MEDIA_AUDIO
     private var readPermissionGranted = false // READ_EXTERNAL_STORAGE
@@ -173,11 +180,31 @@ class MusicList : Fragment() {
     }
 
     private fun actionPermissionGranted(){
-        Toast.makeText(
+        /* Toast.makeText(
             requireContext(),
             "Todos los permisos se han concedido!!!!",
             Toast.LENGTH_SHORT
-        ).show()
+        ).show() */
+        musicListViewModel.getAllAudio()
+
+        musicListViewModel.musicFiles.observe(viewLifecycleOwner){ songs ->
+            if(songs.isNotEmpty()){
+                // Hay por lo menos un archivo reproducible
+                val songsAdapter = SongsAdapter(songs){ position ->
+                    // Manejamos el click de la canción
+
+                    // Manejamos el Media Player
+                    findNavController().navigate(MusicListDirections.actionMusicListToMusicPlayer(
+                        position
+                    ))
+                }
+
+                binding.rvSongs.apply {
+                    layoutManager = LinearLayoutManager(requireContext(), RecyclerView.VERTICAL, false)
+                    adapter = songsAdapter
+                }
+            }
+        }
     }
 
     private fun showPermissionExplanationDialog(
